@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Einkaufsliste</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #0f0f0f; color: #f0ede8; font-family: 'DM Mono','Courier New',monospace; min-height: 100vh; }
+  ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-thumb { background: #333; }
+
+  #header { background: #111; border-bottom: 1px solid #1e1e1e; padding: 16px 18px 0; position: sticky; top: 0; z-index: 10; }
+  #header-inner { max-width: 600px; margin: 0 auto; }
+  #title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+  #title { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; }
+  #counter { font-size: 12px; letter-spacing: 1px; }
+  #tabs { display: flex; }
+  .tab { padding: 8px 20px; background: transparent; border: none; border-bottom: 2px solid transparent; color: #444; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; font-weight: 500; font-family: inherit; cursor: pointer; }
+  .tab.active { color: #f0ede8; border-bottom-color: #f0ede8; }
+
+  #content { max-width: 600px; margin: 0 auto; padding: 18px 14px 130px; }
+
+  /* Search & chips */
+  .search-input { width: 100%; background: #171717; border: 1px solid #222; border-radius: 3px; padding: 9px 12px; color: #f0ede8; font-size: 12px; margin-bottom: 10px; font-family: inherit; }
+  .search-input:focus { outline: none; border-color: #333; }
+  #chips { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; scrollbar-width: none; }
+  #chips::-webkit-scrollbar { display: none; }
+  .chip { padding: 4px 10px; background: #171717; color: #555; border: 1px solid #222; border-radius: 2px; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; font-family: inherit; cursor: pointer; white-space: nowrap; }
+  .chip.active { background: #e8c547; color: #0f0f0f; border-color: #e8c547; }
+
+  /* Item list */
+  .item-list { background: #131313; border: 1px solid #1e1e1e; border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+  .item-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid #1a1a1a; cursor: pointer; transition: background 0.1s; }
+  .item-row:last-child { border-bottom: none; }
+  .item-row:active { background: #1c1c1c; }
+  .item-row.needed { background: #141d14; }
+  .item-row.bought-row { background: #111811; }
+  .checkbox { width: 16px; height: 16px; border: 1.5px solid #2e2e2e; border-radius: 2px; background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; color: #0f0f0f; font-weight: 900; }
+  .checkbox.checked { background: #5dba6e; border-color: #5dba6e; }
+  .checkbox.checked-large { width: 20px; height: 20px; border-radius: 3px; font-size: 11px; }
+  .item-name { font-size: 12px; color: #666; flex: 1; }
+  .item-name.on { color: #a8deb0; }
+  .item-name.striked { text-decoration: line-through; color: #252525; font-size: 14px; }
+  .item-name.shop-normal { font-size: 14px; color: #ccc; letter-spacing: 0.2px; }
+  .item-cat { font-size: 7px; color: #252525; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* Custom add */
+  .add-row { display: flex; gap: 7px; margin-bottom: 12px; }
+  .add-input { flex: 1; background: #171717; border: 1px solid #222; border-radius: 3px; padding: 8px 12px; color: #f0ede8; font-size: 12px; font-family: inherit; }
+  .add-input:focus { outline: none; }
+  .add-btn { background: #e8c547; color: #0f0f0f; border: none; border-radius: 3px; padding: 8px 13px; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+  /* Footer controls */
+  .footer-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .footer-count { font-size: 10px; color: #333; }
+  .btn-ghost { background: transparent; border: 1px solid #1e1e1e; color: #3a3a3a; border-radius: 2px; padding: 3px 10px; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; font-family: inherit; cursor: pointer; }
+
+  /* CTA buttons */
+  .btn-yellow { width: 100%; background: #e8c547; color: #0f0f0f; border: none; border-radius: 4px; padding: 13px; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; font-family: inherit; cursor: pointer; }
+  .btn-green { width: 100%; background: #5dba6e; color: #0f0f0f; border: none; border-radius: 4px; padding: 13px; font-size: 10px; letter-spacing: 3px; text-transform: uppercase; font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 8px; }
+  .btn-outline { background: transparent; border: 1px solid #222; color: #555; border-radius: 3px; padding: 7px 16px; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; font-family: inherit; cursor: pointer; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 50px 0; color: #333; }
+  .empty-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+
+  /* Progress */
+  #progress-wrap { margin-bottom: 16px; }
+  #progress-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  #progress-left { font-size: 9px; color: #444; letter-spacing: 1px; }
+  #progress-right { font-size: 9px; letter-spacing: 1px; }
+  #progress-track { height: 2px; background: #1e1e1e; border-radius: 2px; overflow: hidden; }
+  #progress-bar { height: 100%; border-radius: 2px; transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+
+  /* Shop group label */
+  .group-label { font-size: 7px; letter-spacing: 3px; text-transform: uppercase; color: #2e2e2e; margin-bottom: 4px; padding-left: 2px; }
+  .group-wrap { margin-bottom: 16px; }
+
+  /* AI bar */
+  #ai-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 1px solid #1e1e1e; padding: 10px 14px 16px; }
+  #ai-bar-inner { max-width: 600px; margin: 0 auto; }
+  #ai-status { font-size: 10px; letter-spacing: 0.5px; margin-bottom: 7px; padding-left: 1px; }
+  #ai-status.loading { animation: pulse 1s infinite; }
+  #ai-input-row { display: flex; gap: 7px; }
+  #ai-input { flex: 1; background: #1a1a1a; border: 1px solid #252525; border-radius: 4px; padding: 10px 12px; color: #f0ede8; font-size: 12px; font-family: inherit; }
+  #ai-input:focus { outline: none; }
+  #ai-send { background: #f0ede8; color: #0f0f0f; border: none; border-radius: 4px; padding: 10px 14px; font-size: 14px; font-weight: 700; min-width: 42px; cursor: pointer; font-family: inherit; }
+  #ai-send:disabled { background: #222; cursor: default; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .fade-in { animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div id="header-inner">
+    <div id="title-row">
+      <span id="title">EINKAUF</span>
+      <span id="counter" style="display:none"></span>
+    </div>
+    <div id="tabs">
+      <button class="tab active" data-mode="plan" onclick="setMode('plan')">Planen</button>
+      <button class="tab" data-mode="shop" onclick="setMode('shop')">Einkaufen</button>
+    </div>
+  </div>
+</div>
+
+<div id="content"></div>
+
+<div id="ai-bar">
+  <div id="ai-bar-inner">
+    <div id="ai-status" style="display:none"></div>
+    <div id="ai-input-row">
+      <input id="ai-input" type="text" placeholder="Was brauchst du? z.B. «Milch, Eier»" onkeydown="if(event.key==='Enter')sendChat()">
+      <button id="ai-send" onclick="sendChat()" disabled>→</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATEGORY_ORDER = [
+  "Haustiere","Grill","Gesundheit","Körperpflege","Haushalt","Vorrat",
+  "Frisch Kühl","Frisch Gemüse","Frisch Fleisch","Bäckerei","Sonstiges"
+];
+
+const ALL_ITEMS = [
+  { id:"katzenfutter", name:"Katzenfutter", category:"Haustiere" },
+  { id:"katzensand", name:"Katzensand", category:"Haustiere" },
+  { id:"anzuendwuerfel", name:"Anzündwürfel", category:"Grill" },
+  { id:"kohle", name:"Kohle", category:"Grill" },
+  { id:"holzschnitze", name:"Holzschnitze", category:"Grill" },
+  { id:"troepfli", name:"Tröpfli", category:"Gesundheit" },
+  { id:"omni9", name:"Omni Biotic 9", category:"Gesundheit" },
+  { id:"omni10", name:"Omni Biotic 10", category:"Gesundheit" },
+  { id:"vitaminc", name:"Vitamin C Burgenstein retard 500", category:"Gesundheit" },
+  { id:"bepanthen", name:"Bepanthen Augentropfen", category:"Gesundheit" },
+  { id:"aspirin", name:"Medizin Aspirin", category:"Gesundheit" },
+  { id:"pille", name:"Pille Minerva", category:"Gesundheit" },
+  { id:"sonnencreme", name:"Sonnencreme", category:"Gesundheit" },
+  { id:"nasenspray", name:"Nasenspray Meersalz", category:"Gesundheit" },
+  { id:"ohrenstoepsel", name:"Ohrenstöpsel", category:"Gesundheit" },
+  { id:"hustensaft", name:"Hustensaft", category:"Gesundheit" },
+  { id:"pflaster", name:"Pflaster", category:"Gesundheit" },
+  { id:"abschminkschaum", name:"Abschminkschaum", category:"Körperpflege" },
+  { id:"zahnpasta", name:"Zahnpasta", category:"Körperpflege" },
+  { id:"zahnbuersten", name:"Zahnbürsten", category:"Körperpflege" },
+  { id:"duschmittel", name:"Duschmittel", category:"Körperpflege" },
+  { id:"bademittel", name:"Bademittel", category:"Körperpflege" },
+  { id:"haarwaschmittel", name:"Haarwaschmittel Kids", category:"Körperpflege" },
+  { id:"deo", name:"Deo", category:"Körperpflege" },
+  { id:"bodylotion", name:"Bodylotion", category:"Körperpflege" },
+  { id:"niveacreme", name:"Niveacreme", category:"Körperpflege" },
+  { id:"rasierklingen", name:"Rasierklingen", category:"Körperpflege" },
+  { id:"rasierschaum", name:"Rasierschaum", category:"Körperpflege" },
+  { id:"intimtuecher", name:"Intimpflegetücher", category:"Körperpflege" },
+  { id:"obs", name:"OBs", category:"Körperpflege" },
+  { id:"ohrenwatte", name:"Ohrenwattestäbchen", category:"Körperpflege" },
+  { id:"nastuecher", name:"Nastücher", category:"Körperpflege" },
+  { id:"wcpapier", name:"WC Papier", category:"Haushalt" },
+  { id:"haushaltpapier", name:"Haushaltspapier", category:"Haushalt" },
+  { id:"regeneriersalz", name:"Regeneriersalz", category:"Haushalt" },
+  { id:"spuehlpulver", name:"Spühlpulver", category:"Haushalt" },
+  { id:"batterien", name:"Batterien", category:"Haushalt" },
+  { id:"leim", name:"Leim", category:"Haushalt" },
+  { id:"spuehlglanz", name:"Spühlglanz", category:"Haushalt" },
+  { id:"waschmittel", name:"Waschmittel", category:"Haushalt" },
+  { id:"schwarzesaecke", name:"Schwarze Säcke", category:"Haushalt" },
+  { id:"plastiksaecke", name:"Plastiksäcke", category:"Haushalt" },
+  { id:"backtrennpapier", name:"Backtrennpapier", category:"Haushalt" },
+  { id:"alufolie", name:"Aluminiumfolie", category:"Haushalt" },
+  { id:"abfallsaecke", name:"Abfallsäcke", category:"Haushalt" },
+  { id:"bouillon", name:"Bouillon", category:"Vorrat" },
+  { id:"bernaise", name:"Bernaise Sauce", category:"Vorrat" },
+  { id:"senf", name:"Senf", category:"Vorrat" },
+  { id:"mandeln", name:"Mandeln", category:"Vorrat" },
+  { id:"cashewnuts", name:"Cashewnuts", category:"Vorrat" },
+  { id:"apfelschnitze", name:"Apfelschnitze", category:"Vorrat" },
+  { id:"darvida", name:"Darvida", category:"Vorrat" },
+  { id:"knaeckebrot", name:"Knäckebrot", category:"Vorrat" },
+  { id:"zwieback", name:"Zwieback", category:"Vorrat" },
+  { id:"gemahlmandeln", name:"Gemahlene Mandeln Lo", category:"Vorrat" },
+  { id:"salz", name:"Salz", category:"Vorrat" },
+  { id:"pfeffer", name:"Pfeffer", category:"Vorrat" },
+  { id:"zucker", name:"Zucker", category:"Vorrat" },
+  { id:"vanillezucker", name:"Vanillezucker", category:"Vorrat" },
+  { id:"backpulver", name:"Backpulver", category:"Vorrat" },
+  { id:"konfi", name:"Konfi", category:"Vorrat" },
+  { id:"wildreis", name:"Wildreis", category:"Vorrat" },
+  { id:"risotto", name:"Risotto", category:"Vorrat" },
+  { id:"tee", name:"Tee", category:"Vorrat" },
+  { id:"pasta", name:"Pasta", category:"Vorrat" },
+  { id:"mangochips", name:"Mangochips", category:"Vorrat" },
+  { id:"riegel", name:"Riegel", category:"Vorrat" },
+  { id:"smoothiechips", name:"Smoothiechips", category:"Vorrat" },
+  { id:"pommechips", name:"Pommechips", category:"Vorrat" },
+  { id:"muesli", name:"Müesli", category:"Vorrat" },
+  { id:"kellogs", name:"Kellogs", category:"Vorrat" },
+  { id:"mozi", name:"Mozi", category:"Vorrat" },
+  { id:"salatsauce", name:"Salatsauce", category:"Vorrat" },
+  { id:"kaugummi", name:"Kaugummi", category:"Vorrat" },
+  { id:"pizzateig", name:"Glutenfreier Pizzateig", category:"Vorrat" },
+  { id:"butter", name:"Butter", category:"Frisch Kühl" },
+  { id:"streukaese", name:"Streukäse", category:"Frisch Kühl" },
+  { id:"babybel", name:"Babybel", category:"Frisch Kühl" },
+  { id:"burrata", name:"Burrata", category:"Frisch Kühl" },
+  { id:"milch", name:"Milch", category:"Frisch Kühl" },
+  { id:"rahm", name:"Rahm", category:"Frisch Kühl" },
+  { id:"gekochte_eier", name:"Gekochte Eier", category:"Frisch Kühl" },
+  { id:"eier", name:"Eier", category:"Frisch Kühl" },
+  { id:"mascarpone", name:"Mascarpone", category:"Frisch Kühl" },
+  { id:"yoghurt", name:"Yoghurt", category:"Frisch Kühl" },
+  { id:"skyr", name:"Skyr", category:"Frisch Kühl" },
+  { id:"saeftli", name:"Säftli", category:"Frisch Kühl" },
+  { id:"philadelphia", name:"Philadelphia ohni Glute", category:"Frisch Kühl" },
+  { id:"chäs", name:"Suscht en Chäs", category:"Frisch Kühl" },
+  { id:"glace", name:"Glace", category:"Frisch Kühl" },
+  { id:"salat", name:"Salat", category:"Frisch Gemüse" },
+  { id:"sellerie", name:"Sellerie", category:"Frisch Gemüse" },
+  { id:"gemuese", name:"Gemüse", category:"Frisch Gemüse" },
+  { id:"tomaten", name:"Tomaten", category:"Frisch Gemüse" },
+  { id:"zwiebeln", name:"Zwiebeln", category:"Frisch Gemüse" },
+  { id:"zitronen", name:"Zitronen", category:"Frisch Gemüse" },
+  { id:"kartoffeln", name:"Kartoffeln", category:"Frisch Gemüse" },
+  { id:"fruechte", name:"Früchte", category:"Frisch Gemüse" },
+  { id:"avocado", name:"Avocado", category:"Frisch Gemüse" },
+  { id:"meerrettich", name:"Meerrettich", category:"Frisch Gemüse" },
+  { id:"wuerste", name:"Würste", category:"Frisch Fleisch" },
+  { id:"fleisch", name:"Fleisch", category:"Frisch Fleisch" },
+  { id:"lachs", name:"Lachs", category:"Frisch Fleisch" },
+  { id:"rohschinken", name:"Rohschinken", category:"Frisch Fleisch" },
+  { id:"hackfleisch", name:"Hackfleisch", category:"Frisch Fleisch" },
+  { id:"toastbrot", name:"Toastbrot glutenfrei", category:"Bäckerei" },
+  { id:"weggli", name:"Weggli", category:"Bäckerei" },
+  { id:"zopf", name:"Zopf", category:"Bäckerei" },
+];
+
+const STORAGE_KEY = "raliving_einkauf_v1";
+
+// ── State ──
+let state = { needed:{}, bought:{}, customItems:[], mode:"plan", activeCategory:"Alle", search:"" };
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { const s = JSON.parse(raw); state = { ...state, ...s }; }
+  } catch {}
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+}
+
+loadState();
+render();
+
+// ── Derived ──
+function allItems() { return [...ALL_ITEMS, ...(state.customItems||[])]; }
+function neededItems() { return allItems().filter(i => state.needed[i.id]); }
+function neededCount() { return neededItems().length; }
+function boughtCount() { return neededItems().filter(i => state.bought[i.id]).length; }
+
+// ── Actions ──
+function toggleNeeded(id) {
+  if (state.needed[id]) { delete state.needed[id]; delete state.bought[id]; }
+  else { state.needed[id] = true; }
+  saveState(); render();
+}
+
+function toggleBought(id) {
+  if (state.bought[id]) delete state.bought[id];
+  else state.bought[id] = true;
+  saveState(); render();
+}
+
+function clearNeeded() { state.needed = {}; state.bought = {}; saveState(); render(); }
+
+function finishShopping() {
+  Object.keys(state.bought).forEach(id => { if (state.bought[id]) delete state.needed[id]; });
+  state.bought = {};
+  state.mode = "plan";
+  saveState(); render();
+}
+
+function addCustom() {
+  const inp = document.getElementById('custom-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  const id = "custom_" + Date.now();
+  state.customItems = [...(state.customItems||[]), { id, name, category:"Sonstiges" }];
+  state.needed[id] = true;
+  inp.value = "";
+  saveState(); render();
+}
+
+function setMode(m) { state.mode = m; saveState(); render(); }
+function setCategory(c) { state.activeCategory = c; render(); }
+function setSearch(v) { state.search = v; render(); }
+
+// ── AI ──
+let aiLoading = false;
+let statusTimer = null;
+
+function showStatus(msg, isError) {
+  const el = document.getElementById('ai-status');
+  el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg;
+  el.style.color = isError ? '#e05555' : '#e8c547';
+  el.classList.toggle('loading', aiLoading);
+  clearTimeout(statusTimer);
+  if (msg && !aiLoading) statusTimer = setTimeout(() => { el.style.display='none'; }, 3500);
+}
+
+async function sendChat() {
+  const inp = document.getElementById('ai-input');
+  const msg = inp.value.trim();
+  if (!msg || aiLoading) return;
+  inp.value = "";
+  document.getElementById('ai-send').disabled = true;
+  aiLoading = true;
+  showStatus("...");
+
+  const items = allItems();
+  const needed = neededItems();
+  const neededIds = Object.keys(state.needed).filter(id => state.needed[id]);
+  const boughtIds = Object.keys(state.bought).filter(id => state.bought[id]);
+
+  const systemPrompt = state.mode === "plan"
+    ? `Du bist ein Einkaufsassistent. Der Nutzer nennt Artikel die er braucht (Schweizerdeutsch, Hochdeutsch, Dialekt, Abkürzungen — alles erkennen).
+Antworte NUR mit JSON, kein Markdown, kein Text drumherum.
+Aktionen:
+- Hinzufügen: {"action":"add","ids":["id1","id2"],"message":"kurze Bestätigung auf Deutsch"}
+- Entfernen: {"action":"remove","ids":["id1"],"message":"..."}
+Masterliste:\n${items.map(i => i.id+": "+i.name).join("\n")}\nBereits markiert: ${neededIds.join(", ")||"keine"}`
+    : `Du bist ein Einkaufsassistent. Der Nutzer sagt was er gerade gekauft hat (Schweizerdeutsch, Dialekt — alles erkennen).
+Antworte NUR mit JSON, kein Markdown, kein Text drumherum.
+Aktionen:
+- Gekauft: {"action":"bought","ids":["id1","id2"],"message":"kurze Bestätigung auf Deutsch"}
+- Häkchen entfernen: {"action":"unbought","ids":["id1"],"message":"..."}
+Einkaufsliste:\n${needed.map(i => i.id+": "+i.name).join("\n")}\nBereits gekauft: ${boughtIds.join(", ")||"keine"}`;
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:300,
+        system:systemPrompt,
+        messages:[{role:"user",content:msg}]
+      })
+    });
+    const data = await res.json();
+    const text = (data.content||[]).find(b=>b.type==="text")?.text||"";
+    const parsed = JSON.parse(text.replace(/```json|```/g,"").trim());
+
+    if (parsed.action==="add") parsed.ids.forEach(id => { state.needed[id]=true; });
+    if (parsed.action==="remove") parsed.ids.forEach(id => { delete state.needed[id]; delete state.bought[id]; });
+    if (parsed.action==="bought") parsed.ids.forEach(id => { state.bought[id]=true; });
+    if (parsed.action==="unbought") parsed.ids.forEach(id => { delete state.bought[id]; });
+
+    saveState();
+    aiLoading = false;
+    showStatus(parsed.message||"✓");
+    render();
+  } catch(e) {
+    aiLoading = false;
+    showStatus("Fehler – nochmal versuchen", true);
+  }
+}
+
+document.getElementById('ai-input').addEventListener('input', function() {
+  document.getElementById('ai-send').disabled = !this.value.trim() || aiLoading;
+});
+
+// ── Render ──
+function render() {
+  renderHeader();
+  renderContent();
+  renderAIBar();
+}
+
+function renderHeader() {
+  const nc = neededCount(), bc = boughtCount();
+  const counter = document.getElementById('counter');
+  if (state.mode === 'shop' && nc > 0) {
+    counter.style.display = 'inline';
+    counter.textContent = bc+"/"+nc;
+    counter.style.color = bc===nc ? '#5dba6e' : '#e8c547';
+  } else {
+    counter.style.display = 'none';
+  }
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === state.mode);
+    if (t.dataset.mode === 'plan') t.textContent = "Planen" + (nc>0?" ("+nc+")":"");
+    if (t.dataset.mode === 'shop') t.textContent = "Einkaufen";
+  });
+}
+
+function renderContent() {
+  const el = document.getElementById('content');
+  el.className = 'fade-in';
+  if (state.mode === 'plan') el.innerHTML = renderPlan();
+  else el.innerHTML = renderShop();
+}
+
+function renderPlan() {
+  const items = allItems();
+  const cats = [...CATEGORY_ORDER];
+  const search = state.search.toLowerCase();
+  const filtered = items.filter(i =>
+    i.name.toLowerCase().includes(search) &&
+    (state.activeCategory === "Alle" || i.category === state.activeCategory)
+  );
+  const nc = neededCount();
+
+  const chipCats = ["Alle", ...CATEGORY_ORDER];
+  const chips = chipCats.map(c =>
+    `<button class="chip${state.activeCategory===c?' active':''}" onclick="setCategory('${c.replace(/'/g,"\\'")}')">${c}</button>`
+  ).join("");
+
+  const rows = filtered.map(item => {
+    const on = !!state.needed[item.id];
+    return `<div class="item-row${on?' needed':''}" onclick="toggleNeeded('${item.id}')">
+      <div class="checkbox${on?' checked':''}"></div>
+      <span class="item-name${on?' on':''}">${esc(item.name)}</span>
+      <span class="item-cat">${esc(item.category)}</span>
+    </div>`;
+  }).join("") || `<div style="padding:20px;text-align:center;color:#333;font-size:11px">Keine Artikel</div>`;
+
+  return `
+    <input class="search-input" type="text" placeholder="Suchen..." value="${esc(state.search)}" oninput="setSearch(this.value)">
+    <div id="chips">${chips}</div>
+    <div class="item-list">${rows}</div>
+    <div class="add-row">
+      <input id="custom-input" class="add-input" type="text" placeholder="Eigener Artikel..." onkeydown="if(event.key==='Enter')addCustom()">
+      <button class="add-btn" onclick="addCustom()">+</button>
+    </div>
+    <div class="footer-row">
+      <span class="footer-count">${nc} ausgewählt</span>
+      ${nc>0?`<button class="btn-ghost" onclick="clearNeeded()">Leeren</button>`:''}
+    </div>
+    ${nc>0?`<button class="btn-yellow" onclick="setMode('shop')">Los gehts — ${nc} Artikel →</button>`:''}
+  `;
+}
+
+function renderShop() {
+  const needed = neededItems();
+  const nc = needed.length, bc = boughtCount();
+
+  if (nc === 0) return `
+    <div class="empty">
+      <div class="empty-label">Keine Artikel geplant</div>
+      <button class="btn-outline" onclick="setMode('plan')">← Planen</button>
+    </div>`;
+
+  const pct = Math.round(bc/nc*100);
+  const barColor = bc===nc ? '#5dba6e' : '#e8c547';
+
+  // Group by category in order
+  const grouped = {};
+  needed.forEach(item => {
+    if (!grouped[item.category]) grouped[item.category] = [];
+    grouped[item.category].push(item);
+  });
+  const sortedCats = Object.keys(grouped).sort((a,b) =>
+    CATEGORY_ORDER.indexOf(a) - CATEGORY_ORDER.indexOf(b)
+  );
+
+  const groups = sortedCats.map(cat => {
+    const rows = grouped[cat].map((item,i,arr) => {
+      const bought = !!state.bought[item.id];
+      return `<div class="item-row${bought?' bought-row':''}" onclick="toggleBought('${item.id}')">
+        <div class="checkbox checked-large${bought?' checked':''}"></div>
+        <span class="${bought?'item-name striked':'item-name shop-normal'}">${esc(item.name)}</span>
+      </div>`;
+    }).join("");
+    return `<div class="group-wrap">
+      <div class="group-label">${esc(cat)}</div>
+      <div class="item-list">${rows}</div>
+    </div>`;
+  }).join("");
+
+  const remaining = nc - bc;
+  const finishBtn = bc > 0 ? `<button class="btn-green" onclick="finishShopping()">
+    Einkauf abschliessen (${bc} gekauft${remaining>0?`, ${remaining} bleiben`:''})
+  </button>` : '';
+
+  return `
+    <div id="progress-wrap">
+      <div id="progress-row">
+        <span id="progress-left">${bc} von ${nc} gekauft</span>
+        <span id="progress-right" style="color:${barColor}">${bc===nc?'✓ Fertig!':pct+'%'}</span>
+      </div>
+      <div id="progress-track"><div id="progress-bar" style="width:${pct}%;background:${barColor}"></div></div>
+    </div>
+    ${groups}
+    ${finishBtn}
+  `;
+}
+
+function renderAIBar() {
+  const inp = document.getElementById('ai-input');
+  inp.placeholder = state.mode==='plan' ? "Was brauchst du? z.B. «Milch, Eier»" : "Was hast du gekauft?";
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Initial render
+render();
+</script>
+</body>
+</html>
